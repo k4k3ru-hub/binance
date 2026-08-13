@@ -2,6 +2,8 @@ package exchange_info
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/k4k3ru-hub/binance/go/rest/endpoint"
@@ -27,5 +29,40 @@ func TestSendRequestsEndpointAndDecodesResponse(t *testing.T) {
 	}
 	if len(result.Assets) != 1 || !result.Assets[0].MarginAvailable || result.Symbols[0].Filters[0].MultiplierDecimal != "4" {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestSymbolUnmarshalJSONNormalizesPermissionSets(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want [][]string
+	}{
+		{
+			name: "flat",
+			body: `{"symbol":"BTCUSDT","permissionSets":["GRID","COPY"]}`,
+			want: [][]string{{"GRID", "COPY"}},
+		},
+		{
+			name: "nested",
+			body: `{"symbol":"BTCUSDT","permissionSets":[["GRID"],["COPY","TRADING"]]}`,
+			want: [][]string{{"GRID"}, {"COPY", "TRADING"}},
+		},
+		{
+			name: "missing",
+			body: `{"symbol":"BTCUSDT"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var symbol Symbol
+			if err := json.Unmarshal([]byte(test.body), &symbol); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			if !reflect.DeepEqual(symbol.PermissionSets, test.want) {
+				t.Fatalf("PermissionSets = %#v, want %#v", symbol.PermissionSets, test.want)
+			}
+		})
 	}
 }

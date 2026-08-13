@@ -66,6 +66,52 @@ type Symbol struct {
 	PermissionSets        [][]string `json:"permissionSets,omitempty"`
 }
 
+// UnmarshalJSON decodes a USDⓈ-M symbol and normalizes permission sets.
+//
+// Notes:
+//   - Binance may return permissionSets as either []string or [][]string.
+//   - A one-dimensional value is normalized to one permission set.
+//
+// Parameters:
+//   - data: Encoded USDⓈ-M symbol.
+//
+// Returns:
+//   - Decode error.
+//
+// Version:
+//   - 2026-08-14: Accepted one-dimensional permission sets.
+func (s *Symbol) UnmarshalJSON(data []byte) error {
+	type symbolAlias Symbol
+	var raw struct {
+		symbolAlias
+		PermissionSets json.RawMessage `json:"permissionSets"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("failed to decode USDⓈ-M symbol: %w", err)
+	}
+
+	*s = Symbol(raw.symbolAlias)
+	if len(raw.PermissionSets) == 0 || string(raw.PermissionSets) == "null" {
+		return nil
+	}
+
+	var nested [][]string
+	if err := json.Unmarshal(raw.PermissionSets, &nested); err == nil {
+		s.PermissionSets = nested
+		return nil
+	}
+
+	var flat []string
+	if err := json.Unmarshal(raw.PermissionSets, &flat); err != nil {
+		return fmt.Errorf("failed to decode USDⓈ-M symbol: failed to decode permission sets: %w", err)
+	}
+	if len(flat) != 0 {
+		s.PermissionSets = [][]string{flat}
+	}
+
+	return nil
+}
+
 // Filter represents the union of documented USDⓈ-M symbol-filter fields.
 type Filter struct {
 	FilterType        string `json:"filterType"`
