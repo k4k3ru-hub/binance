@@ -22,3 +22,30 @@ func TestDepthEventsDecodePriceLevels(t *testing.T) {
 		t.Fatalf("futures = %#v", futures)
 	}
 }
+
+func TestDecodeBookTickerEvents(t *testing.T) {
+	spot, err := DecodeSpotBookTicker([]byte(`{"u":400900217,"s":"BNBUSDT","b":"25.35190000","B":"31.21000000","a":"25.36520000","A":"40.66000000"}`))
+	if err != nil {
+		t.Fatalf("DecodeSpotBookTicker() error = %v", err)
+	}
+	if spot.Symbol != "BNBUSDT" || spot.UpdateID != 400900217 || spot.BidQuantity != "31.21000000" || spot.AskPrice != "25.36520000" {
+		t.Fatalf("spot = %#v", spot)
+	}
+
+	futures, err := DecodeUSDSMBookTicker([]byte(`{"stream":"btcusdt@bookTicker","data":{"e":"bookTicker","u":400900217,"E":1568014460893,"T":1568014460891,"s":"BTCUSDT","b":"25.35190000","B":"31.21000000","a":"25.36520000","A":"40.66000000"}}`))
+	if err != nil {
+		t.Fatalf("DecodeUSDSMBookTicker() error = %v", err)
+	}
+	if futures.EventType != "bookTicker" || futures.TransactionTime != 1568014460891 || futures.AskQuantity != "40.66000000" {
+		t.Fatalf("futures = %#v", futures)
+	}
+}
+
+func TestDecodeBookTickerRejectsMalformedMessages(t *testing.T) {
+	if _, err := DecodeSpotBookTicker(nil); err == nil {
+		t.Fatal("DecodeSpotBookTicker(nil) error = nil")
+	}
+	if _, err := DecodeUSDSMBookTicker([]byte(`{"stream":"btcusdt@bookTicker","data":null}`)); err == nil {
+		t.Fatal("DecodeUSDSMBookTicker(empty data) error = nil")
+	}
+}

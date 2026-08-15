@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"net/http"
 
+	spotbookticker "github.com/k4k3ru-hub/binance/go/websocket/spot/book_ticker"
 	spotdepth "github.com/k4k3ru-hub/binance/go/websocket/spot/depth"
 	"github.com/k4k3ru-hub/binance/go/websocket/subscriptions"
+	usdsmbookticker "github.com/k4k3ru-hub/binance/go/websocket/usdsm/book_ticker"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/websocket/usdsm/depth"
 	k4websocket "github.com/k4k3ru-hub/websocket/go"
 )
@@ -25,12 +27,14 @@ type SessionContext = k4websocket.SessionContext
 type SpotClient struct {
 	connection *connection
 	depth      *spotdepth.Client
+	bookTicker *spotbookticker.Client
 }
 
 // USDSMClient is a composed Binance USDⓈ-M Futures WebSocket client.
 type USDSMClient struct {
 	connection *connection
 	depth      *usdsmdepth.Client
+	bookTicker *usdsmbookticker.Client
 }
 
 type connection struct{ client *k4websocket.Client }
@@ -59,7 +63,11 @@ func NewSpotClient(ctx context.Context, handler SessionHandler, option *ClientOp
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Spot WebSocket client: %w", err)
 	}
-	return &SpotClient{connection: conn, depth: depthClient}, nil
+	bookTickerClient, err := spotbookticker.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Spot WebSocket client: %w", err)
+	}
+	return &SpotClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient}, nil
 }
 
 // NewUSDSMClient creates and composes a lazy-connecting USDⓈ-M WebSocket client.
@@ -72,7 +80,11 @@ func NewUSDSMClient(ctx context.Context, handler SessionHandler, option *ClientO
 	if err != nil {
 		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
 	}
-	return &USDSMClient{connection: conn, depth: depthClient}, nil
+	bookTickerClient, err := usdsmbookticker.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
+	}
+	return &USDSMClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient}, nil
 }
 
 func newConnection(ctx context.Context, defaultEndpoint string, handler SessionHandler, option *ClientOption) (*connection, error) {
@@ -136,6 +148,14 @@ func (c *SpotClient) Depth() *spotdepth.Client {
 	return c.depth
 }
 
+// BookTicker returns the Spot best bid/ask subscription client.
+func (c *SpotClient) BookTicker() *spotbookticker.Client {
+	if c == nil {
+		return nil
+	}
+	return c.bookTicker
+}
+
 // Connect establishes the Spot WebSocket connection before the first subscription.
 func (c *SpotClient) Connect(ctx context.Context) error {
 	if c == nil || c.connection == nil {
@@ -166,6 +186,14 @@ func (c *USDSMClient) Depth() *usdsmdepth.Client {
 		return nil
 	}
 	return c.depth
+}
+
+// BookTicker returns the USDⓈ-M best bid/ask subscription client.
+func (c *USDSMClient) BookTicker() *usdsmbookticker.Client {
+	if c == nil {
+		return nil
+	}
+	return c.bookTicker
 }
 
 // Connect establishes the USDⓈ-M WebSocket connection before the first subscription.

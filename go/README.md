@@ -86,41 +86,47 @@ client, err := binance.NewRESTClient(&binance.RESTClientOption{
 
 ## WebSocket SDK
 
-Implement a session handler and decode messages into a root event type:
+Import the WebSocket client, protocol, and operation packages directly:
+
+```go
+import (
+	"github.com/k4k3ru-hub/binance/go/websocket"
+	"github.com/k4k3ru-hub/binance/go/websocket/protocol"
+	spotbookticker "github.com/k4k3ru-hub/binance/go/websocket/spot/book_ticker"
+)
+```
+
+Implement a session handler and decode book-ticker messages:
 
 ```go
 type handler struct{}
 
-func (*handler) HandleMessage(_ binance.WebSocketSessionContext, message []byte) {
-	var event binance.SpotDepthEvent
-	if err := json.Unmarshal(message, &event); err != nil {
+func (*handler) HandleMessage(_ websocket.SessionContext, message []byte) {
+	event, err := protocol.DecodeSpotBookTicker(message)
+	if err != nil {
 		return
 	}
-	if event.EventType != "depthUpdate" {
-		return
-	}
-	// Process event.Bids and event.Asks.
+	// Process event.BidPrice, event.BidQuantity, event.AskPrice, and event.AskQuantity.
 }
 
-func (*handler) HandleClose(binance.WebSocketSessionContext) {}
+func (*handler) HandleClose(websocket.SessionContext) {}
 ```
 
 Create a market-specific client and subscribe:
 
 ```go
-client, err := binance.NewSpotWebSocketClient(ctx, &handler{}, nil)
+client, err := websocket.NewSpotClient(ctx, &handler{}, nil)
 if err != nil {
 	return err
 }
 defer client.Close()
 
-err = client.Depth().Subscribe(ctx, binance.SpotDepthSubscriptionParams{
-	Symbol:      "BTCUSDT",
-	UpdateSpeed: binance.SpotDepthUpdateSpeed100ms,
+err = client.BookTicker().Subscribe(ctx, spotbookticker.Params{
+	Symbol: "BTCUSDT",
 })
 ```
 
-Use `NewUSDSMWebSocketClient` and `USDSMDepthSubscriptionParams` for USDⓈ-M Futures. Subscriptions are restored automatically after reconnects.
+Call `BookTicker().Unsubscribe` with the same parameters to stop the stream. For USDⓈ-M Futures, import `websocket/usdsm/book_ticker`, call `websocket.NewUSDSMClient`, and decode events with `protocol.DecodeUSDSMBookTicker`. Subscriptions are retained for restoration after reconnects.
 
 Depth events are incremental updates. Build a consistent local order book by buffering WebSocket events and combining them with the corresponding REST depth snapshot.
 
@@ -136,8 +142,8 @@ rest/
 ├── spot/               Spot composition and operations
 └── usdsm/              USDⓈ-M Futures composition and operations
 websocket/
-├── protocol/           Subscription messages and depth event types
+├── protocol/           Subscription messages, event types, and decoders
 ├── subscriptions/      Subscription execution contract
-├── spot/depth/         Spot diff-depth subscriptions
-└── usdsm/depth/        USDⓈ-M Futures diff-depth subscriptions
+├── spot/               Spot depth and book-ticker subscriptions
+└── usdsm/              USDⓈ-M Futures depth and book-ticker subscriptions
 ```
