@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	binance "github.com/k4k3ru-hub/binance/go"
+	"github.com/k4k3ru-hub/binance/go/rest"
 	usdsmexchangeinfo "github.com/k4k3ru-hub/binance/go/rest/usdsm/exchange_info"
 	"github.com/k4k3ru-hub/cli-go"
 )
@@ -14,7 +14,7 @@ const CommandName = "exchangeInfo"
 
 // Run executes the USDⓈ-M Futures exchange-information command.
 func Run(_ map[string]*cli.Option) {
-	client, err := binance.NewRESTClient(nil)
+	client, err := rest.NewClient(nil)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

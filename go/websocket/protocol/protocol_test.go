@@ -49,3 +49,30 @@ func TestDecodeBookTickerRejectsMalformedMessages(t *testing.T) {
 		t.Fatal("DecodeUSDSMBookTicker(empty data) error = nil")
 	}
 }
+
+func TestDecodeTradeEvents(t *testing.T) {
+	spot, err := DecodeSpotTrade([]byte(`{"e":"trade","E":1672515782136,"s":"BNBBTC","t":12345,"p":"0.001","q":"100","T":1672515782136,"m":true,"M":true}`))
+	if err != nil {
+		t.Fatalf("DecodeSpotTrade() error = %v", err)
+	}
+	if spot.EventType != "trade" || spot.TradeID != 12345 || spot.Price != "0.001" || !spot.BuyerIsMaker {
+		t.Fatalf("spot = %#v", spot)
+	}
+
+	futures, err := DecodeUSDSMTrade([]byte(`{"stream":"btcusdt@aggTrade","data":{"e":"aggTrade","E":123456789,"s":"BTCUSDT","a":5933014,"p":"0.001","q":"100","f":100,"l":105,"T":123456785,"m":true}}`))
+	if err != nil {
+		t.Fatalf("DecodeUSDSMTrade() error = %v", err)
+	}
+	if futures.EventType != "aggTrade" || futures.AggregateTradeID != 5933014 || futures.FirstTradeID != 100 || futures.LastTradeID != 105 {
+		t.Fatalf("futures = %#v", futures)
+	}
+}
+
+func TestDecodeTradeRejectsMalformedMessages(t *testing.T) {
+	if _, err := DecodeSpotTrade(nil); err == nil {
+		t.Fatal("DecodeSpotTrade(nil) error = nil")
+	}
+	if _, err := DecodeUSDSMTrade([]byte(`{"stream":"btcusdt@aggTrade","data":null}`)); err == nil {
+		t.Fatal("DecodeUSDSMTrade(empty data) error = nil")
+	}
+}

@@ -82,6 +82,33 @@ type USDSMBookTickerEvent struct {
 	AskQuantity     string `json:"A"`
 }
 
+// SpotTradeEvent is one raw Spot trade update.
+type SpotTradeEvent struct {
+	EventType    string `json:"e"`
+	EventTime    int64  `json:"E"`
+	Symbol       string `json:"s"`
+	TradeID      int64  `json:"t"`
+	Price        string `json:"p"`
+	Quantity     string `json:"q"`
+	TradeTime    int64  `json:"T"`
+	BuyerIsMaker bool   `json:"m"`
+	Ignore       bool   `json:"M"`
+}
+
+// USDSMTradeEvent is one USDⓈ-M aggregate-trade update.
+type USDSMTradeEvent struct {
+	EventType        string `json:"e"`
+	EventTime        int64  `json:"E"`
+	Symbol           string `json:"s"`
+	AggregateTradeID int64  `json:"a"`
+	Price            string `json:"p"`
+	Quantity         string `json:"q"`
+	FirstTradeID     int64  `json:"f"`
+	LastTradeID      int64  `json:"l"`
+	TradeTime        int64  `json:"T"`
+	BuyerIsMaker     bool   `json:"m"`
+}
+
 // DecodeSpotBookTicker decodes a raw or combined-stream Spot book-ticker message.
 func DecodeSpotBookTicker(message []byte) (SpotBookTickerEvent, error) {
 	var event SpotBookTickerEvent
@@ -96,6 +123,30 @@ func DecodeUSDSMBookTicker(message []byte) (USDSMBookTickerEvent, error) {
 	var event USDSMBookTickerEvent
 	if err := decodeEvent(message, &event); err != nil {
 		return event, fmt.Errorf("failed to decode USDⓈ-M book ticker event: %w", err)
+	}
+	return event, nil
+}
+
+// DecodeSpotTrade decodes a raw or combined-stream Spot trade message.
+//
+// Version:
+//   - 2026-08-16: Added.
+func DecodeSpotTrade(message []byte) (SpotTradeEvent, error) {
+	var event SpotTradeEvent
+	if err := decodeEvent(message, &event); err != nil {
+		return event, fmt.Errorf("failed to decode Spot trade event: %w", err)
+	}
+	return event, nil
+}
+
+// DecodeUSDSMTrade decodes a raw or combined-stream USDⓈ-M aggregate-trade message.
+//
+// Version:
+//   - 2026-08-16: Added.
+func DecodeUSDSMTrade(message []byte) (USDSMTradeEvent, error) {
+	var event USDSMTradeEvent
+	if err := decodeEvent(message, &event); err != nil {
+		return event, fmt.Errorf("failed to decode USDⓈ-M trade event: %w", err)
 	}
 	return event, nil
 }

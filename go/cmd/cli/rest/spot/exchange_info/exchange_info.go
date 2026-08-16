@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	binance "github.com/k4k3ru-hub/binance/go"
+	"github.com/k4k3ru-hub/binance/go/rest"
 	spotexchangeinfo "github.com/k4k3ru-hub/binance/go/rest/spot/exchange_info"
 	"github.com/k4k3ru-hub/cli-go"
 )
@@ -31,7 +31,7 @@ func ParamsFromOptions(options map[string]*cli.Option) spotexchangeinfo.Params {
 
 // Run executes the Spot exchange-information command.
 func Run(options map[string]*cli.Option) {
-	client, err := binance.NewRESTClient(nil)
+	client, err := rest.NewClient(nil)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

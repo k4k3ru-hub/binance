@@ -21,11 +21,11 @@ func (*testHandler) HandleClose(SessionContext)           {}
 
 func TestConstructorsComposeSubscriptionClientsWithoutConnecting(t *testing.T) {
 	spot, err := NewSpotClient(context.Background(), &testHandler{}, nil)
-	if err != nil || spot == nil || spot.Depth() == nil || spot.BookTicker() == nil {
+	if err != nil || spot == nil || spot.Depth() == nil || spot.BookTicker() == nil || spot.Trades() == nil {
 		t.Fatalf("NewSpotClient() = %#v, %v", spot, err)
 	}
 	futures, err := NewUSDSMClient(context.Background(), &testHandler{}, nil)
-	if err != nil || futures == nil || futures.Depth() == nil || futures.BookTicker() == nil {
+	if err != nil || futures == nil || futures.Depth() == nil || futures.BookTicker() == nil || futures.Trades() == nil {
 		t.Fatalf("NewUSDSMClient() = %#v, %v", futures, err)
 	}
 }

@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	binance "github.com/k4k3ru-hub/binance/go"
+	"github.com/k4k3ru-hub/binance/go/rest"
+	restprotocol "github.com/k4k3ru-hub/binance/go/rest/protocol"
 	spotdepth "github.com/k4k3ru-hub/binance/go/rest/spot/depth"
 	"github.com/k4k3ru-hub/cli-go"
 )
@@ -52,7 +53,7 @@ func Run(options map[string]*cli.Option) {
 		command.ShowUsage()
 		return
 	}
-	client, err := binance.NewRESTClient(nil)
+	client, err := rest.NewClient(nil)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -65,7 +66,7 @@ func Run(options map[string]*cli.Option) {
 	outputBook(result.Bids, result.Asks)
 }
 
-func outputBook(bids, asks []binance.PriceLevel) {
+func outputBook(bids, asks []restprotocol.PriceLevel) {
 	headers := []string{"Side", "Price", "Quantity"}
 	data := make([][]interface{}, 0, len(bids)+len(asks))
 	for _, level := range bids {

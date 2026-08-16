@@ -9,7 +9,8 @@ import (
 	"strings"
 	"syscall"
 
-	binance "github.com/k4k3ru-hub/binance/go"
+	"github.com/k4k3ru-hub/binance/go/websocket"
+	wsprotocol "github.com/k4k3ru-hub/binance/go/websocket/protocol"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/websocket/usdsm/depth"
 	"github.com/k4k3ru-hub/cli-go"
 )
@@ -43,8 +44,8 @@ func ParamsFromOptions(options map[string]*cli.Option) (usdsmdepth.Params, error
 
 type sessionHandler struct{}
 
-func (*sessionHandler) HandleMessage(_ binance.WebSocketSessionContext, message []byte) {
-	var event binance.USDSMDepthEvent
+func (*sessionHandler) HandleMessage(_ websocket.SessionContext, message []byte) {
+	var event wsprotocol.USDSMDepthEvent
 	if err := json.Unmarshal(message, &event); err != nil || event.EventType != "depthUpdate" {
 		return
 	}
@@ -53,7 +54,7 @@ func (*sessionHandler) HandleMessage(_ binance.WebSocketSessionContext, message 
 	}
 }
 
-func (*sessionHandler) HandleClose(binance.WebSocketSessionContext) {}
+func (*sessionHandler) HandleClose(websocket.SessionContext) {}
 
 func Run(options map[string]*cli.Option) {
 	params, err := ParamsFromOptions(options)
@@ -64,7 +65,7 @@ func Run(options map[string]*cli.Option) {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	client, err := binance.NewUSDSMWebSocketClient(ctx, &sessionHandler{}, nil)
+	client, err := websocket.NewUSDSMClient(ctx, &sessionHandler{}, nil)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

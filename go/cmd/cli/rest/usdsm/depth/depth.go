@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	binance "github.com/k4k3ru-hub/binance/go"
+	"github.com/k4k3ru-hub/binance/go/rest"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/rest/usdsm/depth"
 	"github.com/k4k3ru-hub/cli-go"
 )
@@ -48,7 +48,7 @@ func Run(options map[string]*cli.Option) {
 		command.ShowUsage()
 		return
 	}
-	client, err := binance.NewRESTClient(nil)
+	client, err := rest.NewClient(nil)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

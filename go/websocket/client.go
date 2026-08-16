@@ -8,9 +8,11 @@ import (
 
 	spotbookticker "github.com/k4k3ru-hub/binance/go/websocket/spot/book_ticker"
 	spotdepth "github.com/k4k3ru-hub/binance/go/websocket/spot/depth"
+	spottrades "github.com/k4k3ru-hub/binance/go/websocket/spot/trades"
 	"github.com/k4k3ru-hub/binance/go/websocket/subscriptions"
 	usdsmbookticker "github.com/k4k3ru-hub/binance/go/websocket/usdsm/book_ticker"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/websocket/usdsm/depth"
+	usdsmtrades "github.com/k4k3ru-hub/binance/go/websocket/usdsm/trades"
 	k4websocket "github.com/k4k3ru-hub/websocket/go"
 )
 
@@ -28,6 +30,7 @@ type SpotClient struct {
 	connection *connection
 	depth      *spotdepth.Client
 	bookTicker *spotbookticker.Client
+	trades     *spottrades.Client
 }
 
 // USDSMClient is a composed Binance USDⓈ-M Futures WebSocket client.
@@ -35,6 +38,7 @@ type USDSMClient struct {
 	connection *connection
 	depth      *usdsmdepth.Client
 	bookTicker *usdsmbookticker.Client
+	trades     *usdsmtrades.Client
 }
 
 type connection struct{ client *k4websocket.Client }
@@ -67,7 +71,11 @@ func NewSpotClient(ctx context.Context, handler SessionHandler, option *ClientOp
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Spot WebSocket client: %w", err)
 	}
-	return &SpotClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient}, nil
+	tradesClient, err := spottrades.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Spot WebSocket client: %w", err)
+	}
+	return &SpotClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient, trades: tradesClient}, nil
 }
 
 // NewUSDSMClient creates and composes a lazy-connecting USDⓈ-M WebSocket client.
@@ -84,7 +92,11 @@ func NewUSDSMClient(ctx context.Context, handler SessionHandler, option *ClientO
 	if err != nil {
 		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
 	}
-	return &USDSMClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient}, nil
+	tradesClient, err := usdsmtrades.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
+	}
+	return &USDSMClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient, trades: tradesClient}, nil
 }
 
 func newConnection(ctx context.Context, defaultEndpoint string, handler SessionHandler, option *ClientOption) (*connection, error) {
@@ -156,6 +168,17 @@ func (c *SpotClient) BookTicker() *spotbookticker.Client {
 	return c.bookTicker
 }
 
+// Trades returns the Spot trade subscription client.
+//
+// Version:
+//   - 2026-08-16: Added.
+func (c *SpotClient) Trades() *spottrades.Client {
+	if c == nil {
+		return nil
+	}
+	return c.trades
+}
+
 // Connect establishes the Spot WebSocket connection before the first subscription.
 func (c *SpotClient) Connect(ctx context.Context) error {
 	if c == nil || c.connection == nil {
@@ -194,6 +217,17 @@ func (c *USDSMClient) BookTicker() *usdsmbookticker.Client {
 		return nil
 	}
 	return c.bookTicker
+}
+
+// Trades returns the USDⓈ-M aggregate-trade subscription client.
+//
+// Version:
+//   - 2026-08-16: Added.
+func (c *USDSMClient) Trades() *usdsmtrades.Client {
+	if c == nil {
+		return nil
+	}
+	return c.trades
 }
 
 // Connect establishes the USDⓈ-M WebSocket connection before the first subscription.
