@@ -39,6 +39,35 @@ func TestClientRoutesAPIGroupsToSeparateBaseURLs(t *testing.T) {
 	}
 }
 
+func TestClientComposesUSDSMOpenInterestOperations(t *testing.T) {
+	client, err := NewClient(&ClientOption{HTTPClient: &routingHTTPClient{}})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	if client.USDSM().OpenInterest() == nil {
+		t.Fatal("USDSM OpenInterest() = nil")
+	}
+	if client.USDSM().OpenInterestHistory() == nil {
+		t.Fatal("USDSM OpenInterestHistory() = nil")
+	}
+}
+
+func TestClientComposesUSDSMFundingOperations(t *testing.T) {
+	client, err := NewClient(&ClientOption{HTTPClient: &routingHTTPClient{}})
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+	if client.USDSM().FundingRateHistory() == nil {
+		t.Fatal("USDSM FundingRateHistory() = nil")
+	}
+	if client.USDSM().PremiumIndex() == nil {
+		t.Fatal("USDSM PremiumIndex() = nil")
+	}
+	if client.USDSM().FundingInfo() == nil {
+		t.Fatal("USDSM FundingInfo() = nil")
+	}
+}
+
 type errorHTTPClient struct{}
 
 func (errorHTTPClient) Do(*http.Request) (*http.Response, error) {

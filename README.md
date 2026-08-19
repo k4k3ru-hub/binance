@@ -12,6 +12,11 @@ It includes a CLI for all implemented endpoints under `go/cmd/cli`.
 - Spot `GET /api/v3/depth`
 - USDⓈ-M Futures `GET /fapi/v1/exchangeInfo`
 - USDⓈ-M Futures `GET /fapi/v1/depth`
+- USDⓈ-M Futures `GET /fapi/v1/openInterest`
+- USDⓈ-M Futures `GET /futures/data/openInterestHist`
+- USDⓈ-M Futures `GET /fapi/v1/fundingRate`
+- USDⓈ-M Futures `GET /fapi/v1/premiumIndex`
+- USDⓈ-M Futures `GET /fapi/v1/fundingInfo`
 - Spot WebSocket diff-depth stream
 - USDⓈ-M Futures WebSocket diff-depth stream
 - Spot WebSocket trade stream

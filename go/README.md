@@ -40,6 +40,11 @@ import (
 	spotexchangeinfo "github.com/k4k3ru-hub/binance/go/rest/spot/exchange_info"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/rest/usdsm/depth"
 	usdsmexchangeinfo "github.com/k4k3ru-hub/binance/go/rest/usdsm/exchange_info"
+	fundinginfo "github.com/k4k3ru-hub/binance/go/rest/usdsm/funding_info"
+	fundingratehistory "github.com/k4k3ru-hub/binance/go/rest/usdsm/funding_rate_history"
+	openinterest "github.com/k4k3ru-hub/binance/go/rest/usdsm/open_interest"
+	openinteresthistory "github.com/k4k3ru-hub/binance/go/rest/usdsm/open_interest_history"
+	premiumindex "github.com/k4k3ru-hub/binance/go/rest/usdsm/premium_index"
 )
 ```
 
@@ -78,6 +83,47 @@ book, err := client.USDSM().Depth().Send(ctx, usdsmdepth.Params{
 	Symbol: "BTCUSDT",
 	Limit:  100,
 })
+```
+
+Get the current USDⓈ-M Futures open interest:
+
+```go
+current, err := client.USDSM().OpenInterest().Send(ctx, openinterest.Params{
+	Symbol: "BTCUSDT",
+})
+```
+
+Get historical USDⓈ-M Futures open-interest observations:
+
+```go
+history, err := client.USDSM().OpenInterestHistory().Send(ctx, openinteresthistory.Params{
+	Symbol: "BTCUSDT",
+	Period: openinteresthistory.Period5m,
+	Limit:  500,
+})
+```
+
+Get settled funding-rate history:
+
+```go
+fundingRates, err := client.USDSM().FundingRateHistory().Send(ctx, fundingratehistory.Params{
+	Symbol: "BTCUSDT",
+	Limit:  1000,
+})
+```
+
+Get current mark-price and funding-rate observations:
+
+```go
+premiumIndexes, err := client.USDSM().PremiumIndex().Send(ctx, premiumindex.Params{
+	Symbol: "BTCUSDT",
+})
+```
+
+Get symbols whose funding settings have been adjusted:
+
+```go
+fundingSettings, err := client.USDSM().FundingInfo().Send(ctx, fundinginfo.Params{})
 ```
 
 ## Custom configuration
