@@ -93,7 +93,7 @@ func TestSpotBookTickerSubscriptionIsRestoredAfterReconnect(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("timed out waiting for first connection to close")
 	}
-	if err := client.connection.client.ResubscribeAll(context.Background()); err != nil {
+	if err := client.connection.resubscribeAll(context.Background()); err != nil {
 		t.Fatalf("ResubscribeAll() error = %v", err)
 	}
 

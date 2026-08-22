@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 
 	spotbookticker "github.com/k4k3ru-hub/binance/go/websocket/spot/book_ticker"
 	spotdepth "github.com/k4k3ru-hub/binance/go/websocket/spot/depth"
@@ -41,7 +42,25 @@ type USDSMClient struct {
 	trades     *usdsmtrades.Client
 }
 
-type connection struct{ client *k4websocket.Client }
+type websocketClient interface {
+	Connect(context.Context) error
+	SessionContext() (SessionContext, error)
+	SendRaw(context.Context, []byte) error
+	Close() error
+}
+
+type connection struct {
+	client websocketClient
+
+	controlMu         sync.Mutex
+	subscriptions     map[string][]byte
+	subscriptionOrder []string
+	sessionID         uint64
+	limiter           controlMessageLimiter
+	newLimiter        func() controlMessageLimiter
+	closeCtx          context.Context
+	cancelCloseCtx    context.CancelFunc
+}
 
 // DefaultSpotClientOption returns default Spot WebSocket options.
 func DefaultSpotClientOption() *ClientOption {
@@ -103,6 +122,9 @@ func newConnection(ctx context.Context, defaultEndpoint string, handler SessionH
 	if handler == nil {
 		return nil, fmt.Errorf("session_handler=null")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	cloned := cloneClientOption(option)
 	endpointURL := cloned.EndpointURL
 	if endpointURL == "" {
@@ -112,7 +134,16 @@ func newConnection(ctx context.Context, defaultEndpoint string, handler SessionH
 	if err != nil {
 		return nil, err
 	}
-	return &connection{client: client}, nil
+	closeCtx, cancelCloseCtx := context.WithCancel(ctx)
+	return &connection{
+		client:        client,
+		subscriptions: make(map[string][]byte),
+		newLimiter: func() controlMessageLimiter {
+			return newControlMessageLimiter(defaultControlMessageInterval)
+		},
+		closeCtx:       closeCtx,
+		cancelCloseCtx: cancelCloseCtx,
+	}, nil
 }
 
 func cloneClientOption(option *ClientOption) *ClientOption {
@@ -140,14 +171,99 @@ func (c *connection) Subscribe(ctx context.Context, key string, payload []byte) 
 	if c == nil || c.client == nil {
 		return fmt.Errorf("failed to subscribe WebSocket: connection=null")
 	}
-	return c.client.Subscribe(ctx, key, payload)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	c.controlMu.Lock()
+	defer c.controlMu.Unlock()
+	if _, exists := c.subscriptions[key]; exists {
+		return nil
+	}
+	if err := c.sendControlMessage(ctx, payload); err != nil {
+		return fmt.Errorf("failed to subscribe WebSocket: %w", err)
+	}
+	c.subscriptions[key] = append([]byte(nil), payload...)
+	c.subscriptionOrder = append(c.subscriptionOrder, key)
+	return nil
 }
 
 func (c *connection) Unsubscribe(ctx context.Context, key string, payload []byte) error {
 	if c == nil || c.client == nil {
 		return fmt.Errorf("failed to unsubscribe WebSocket: connection=null")
 	}
-	return c.client.Unsubscribe(ctx, key, payload)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	c.controlMu.Lock()
+	defer c.controlMu.Unlock()
+	if _, exists := c.subscriptions[key]; !exists {
+		return nil
+	}
+	if err := c.sendControlMessage(ctx, payload); err != nil {
+		return fmt.Errorf("failed to unsubscribe WebSocket: %w", err)
+	}
+	delete(c.subscriptions, key)
+	for index, subscriptionKey := range c.subscriptionOrder {
+		if subscriptionKey == key {
+			c.subscriptionOrder = append(c.subscriptionOrder[:index], c.subscriptionOrder[index+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
+func (c *connection) sendControlMessage(ctx context.Context, payload []byte) error {
+	if err := c.client.Connect(ctx); err != nil {
+		return fmt.Errorf("failed to connect WebSocket: %w", err)
+	}
+	session, err := c.client.SessionContext()
+	if err != nil {
+		return fmt.Errorf("failed to get WebSocket session: %w", err)
+	}
+	if session == nil {
+		return fmt.Errorf("failed to get WebSocket session: session=null")
+	}
+	if session.ID() != c.sessionID {
+		c.sessionID = session.ID()
+		c.limiter = c.newLimiter()
+	}
+
+	waitCtx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(c.closeCtx, cancel)
+	defer func() {
+		stop()
+		cancel()
+	}()
+	if err := c.limiter.Wait(waitCtx); err != nil {
+		return fmt.Errorf("failed to wait for WebSocket control message limit: %w", err)
+	}
+	if err := waitCtx.Err(); err != nil {
+		return fmt.Errorf("failed to wait for WebSocket control message limit: %w", err)
+	}
+	if err := c.client.SendRaw(ctx, payload); err != nil {
+		return fmt.Errorf("failed to enqueue WebSocket control message: %w", err)
+	}
+	return nil
+}
+
+func (c *connection) resubscribeAll(ctx context.Context) error {
+	if c == nil || c.client == nil {
+		return fmt.Errorf("failed to resubscribe WebSocket: connection=null")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c.controlMu.Lock()
+	defer c.controlMu.Unlock()
+	for _, key := range c.subscriptionOrder {
+		payload := c.subscriptions[key]
+		if err := c.sendControlMessage(ctx, payload); err != nil {
+			return fmt.Errorf("failed to resubscribe WebSocket: %w", err)
+		}
+	}
+	return nil
 }
 
 var _ subscriptions.Executor = (*connection)(nil)
@@ -192,6 +308,7 @@ func (c *SpotClient) Close() error {
 	if c == nil || c.connection == nil {
 		return fmt.Errorf("failed to close Spot WebSocket: client=null")
 	}
+	c.connection.cancelCloseCtx()
 	return c.connection.client.Close()
 }
 
@@ -243,6 +360,7 @@ func (c *USDSMClient) Close() error {
 	if c == nil || c.connection == nil {
 		return fmt.Errorf("failed to close USDⓈ-M WebSocket: client=null")
 	}
+	c.connection.cancelCloseCtx()
 	return c.connection.client.Close()
 }
 

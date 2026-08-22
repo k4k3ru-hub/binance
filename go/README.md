@@ -184,6 +184,14 @@ Public trades are available from `client.Trades()`. Spot uses the raw `<symbol>@
 
 Depth events are incremental updates. Build a consistent local order book by buffering WebSocket events and combining them with the corresponding REST depth snapshot.
 
+### WebSocket control-message rate limiting
+
+Spot and USDⓈ-M WebSocket `SUBSCRIBE` and `UNSUBSCRIBE` messages are smoothed independently for each physical connection. The first control message on a connection can be enqueued immediately; subsequent messages are enqueued no sooner than 350 milliseconds after the preceding control message. The same limit applies when saved subscriptions are restored after reconnecting.
+
+This conservative limit keeps subscription traffic at no more than three messages in a normal one-second interval, leaving capacity under Binance Spot's five-message-per-second connection limit for WebSocket PING and PONG control frames. The underlying WebSocket client sends a client PING every 25 seconds by default, and Gorilla WebSocket's default server-PING handler writes the corresponding PONG. PING and PONG frames do not pass through the subscription limiter; integrating every outbound frame into one scheduler is outside the current client contract.
+
+Creating many subscriptions can therefore take time. Limiter waits honor the `context.Context` passed to `Subscribe` or `Unsubscribe`, including its cancellation and deadline. A successful call means the JSON control message was accepted by the local WebSocket send queue; it does not mean that Binance has returned a subscription acknowledgement.
+
 ## Package layout
 
 ```text
