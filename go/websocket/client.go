@@ -13,6 +13,7 @@ import (
 	"github.com/k4k3ru-hub/binance/go/websocket/subscriptions"
 	usdsmbookticker "github.com/k4k3ru-hub/binance/go/websocket/usdsm/book_ticker"
 	usdsmdepth "github.com/k4k3ru-hub/binance/go/websocket/usdsm/depth"
+	usdsmmarkprice "github.com/k4k3ru-hub/binance/go/websocket/usdsm/mark_price"
 	usdsmtrades "github.com/k4k3ru-hub/binance/go/websocket/usdsm/trades"
 	k4websocket "github.com/k4k3ru-hub/websocket/go"
 )
@@ -39,6 +40,7 @@ type USDSMClient struct {
 	connection *connection
 	depth      *usdsmdepth.Client
 	bookTicker *usdsmbookticker.Client
+	markPrice  *usdsmmarkprice.Client
 	trades     *usdsmtrades.Client
 }
 
@@ -111,11 +113,15 @@ func NewUSDSMClient(ctx context.Context, handler SessionHandler, option *ClientO
 	if err != nil {
 		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
 	}
+	markPriceClient, err := usdsmmarkprice.NewClient(conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
+	}
 	tradesClient, err := usdsmtrades.NewClient(conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create USDⓈ-M WebSocket client: %w", err)
 	}
-	return &USDSMClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient, trades: tradesClient}, nil
+	return &USDSMClient{connection: conn, depth: depthClient, bookTicker: bookTickerClient, markPrice: markPriceClient, trades: tradesClient}, nil
 }
 
 func newConnection(ctx context.Context, defaultEndpoint string, handler SessionHandler, option *ClientOption) (*connection, error) {
@@ -334,6 +340,17 @@ func (c *USDSMClient) BookTicker() *usdsmbookticker.Client {
 		return nil
 	}
 	return c.bookTicker
+}
+
+// MarkPrice returns the USDⓈ-M mark-price subscription client.
+//
+// Version:
+//   - 2026-08-26: Added.
+func (c *USDSMClient) MarkPrice() *usdsmmarkprice.Client {
+	if c == nil {
+		return nil
+	}
+	return c.markPrice
 }
 
 // Trades returns the USDⓈ-M aggregate-trade subscription client.

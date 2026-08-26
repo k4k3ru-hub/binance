@@ -182,6 +182,8 @@ Call `BookTicker().Unsubscribe` with the same parameters to stop the stream. For
 
 Public trades are available from `client.Trades()`. Spot uses the raw `<symbol>@trade` stream and `protocol.DecodeSpotTrade`; USDⓈ-M uses Binance's `<symbol>@aggTrade` stream and `protocol.DecodeUSDSMTrade`. Import the matching `websocket/spot/trades` or `websocket/usdsm/trades` package for subscription parameters. Trade subscriptions are also retained for restoration after reconnects.
 
+USDⓈ-M mark-price updates are available from `client.MarkPrice()`. Import `websocket/usdsm/mark_price`, subscribe to `<symbol>@markPrice` or the one-second `<symbol>@markPrice@1s` variant, and decode messages with `protocol.DecodeUSDSMMarkPrice`. Events include the mark price, estimated settlement price, index price, funding rate, and next funding time.
+
 Depth events are incremental updates. Build a consistent local order book by buffering WebSocket events and combining them with the corresponding REST depth snapshot.
 
 ### WebSocket control-message rate limiting
@@ -206,5 +208,5 @@ websocket/
 ├── protocol/           Subscription messages, event types, and decoders
 ├── subscriptions/      Subscription execution contract
 ├── spot/               Spot depth, book-ticker, and trade subscriptions
-└── usdsm/              USDⓈ-M Futures depth, book-ticker, and aggregate-trade subscriptions
+└── usdsm/              USDⓈ-M Futures depth, book-ticker, mark-price, and aggregate-trade subscriptions
 ```

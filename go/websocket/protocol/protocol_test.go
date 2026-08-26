@@ -76,3 +76,27 @@ func TestDecodeTradeRejectsMalformedMessages(t *testing.T) {
 		t.Fatal("DecodeUSDSMTrade(empty data) error = nil")
 	}
 }
+
+func TestDecodeUSDSMMarkPriceEvents(t *testing.T) {
+	raw := `{"e":"markPriceUpdate","E":1562305380000,"s":"BTCUSDT","p":"11794.15000000","P":"11784.62659091","i":"11784.80495970","r":"0.00038167","T":1562306400000}`
+	event, err := DecodeUSDSMMarkPrice([]byte(raw))
+	if err != nil {
+		t.Fatalf("DecodeUSDSMMarkPrice(raw) error = %v", err)
+	}
+	if event.EventType != "markPriceUpdate" || event.EventTime != 1562305380000 || event.Symbol != "BTCUSDT" || event.MarkPrice != "11794.15000000" || event.EstimatedSettlePrice != "11784.62659091" || event.IndexPrice != "11784.80495970" || event.FundingRate != "0.00038167" || event.NextFundingTime != 1562306400000 {
+		t.Fatalf("event = %#v", event)
+	}
+	combined := `{"stream":"btcusdt@markPrice@1s","data":` + raw + `}`
+	event, err = DecodeUSDSMMarkPrice([]byte(combined))
+	if err != nil || event.Symbol != "BTCUSDT" {
+		t.Fatalf("DecodeUSDSMMarkPrice(combined) = %#v, %v", event, err)
+	}
+}
+
+func TestDecodeUSDSMMarkPriceRejectsMalformedMessages(t *testing.T) {
+	for _, message := range [][]byte{nil, []byte(`{"stream":"btcusdt@markPrice","data":null}`), []byte(`{`)} {
+		if _, err := DecodeUSDSMMarkPrice(message); err == nil {
+			t.Fatalf("DecodeUSDSMMarkPrice(%q) error = nil", message)
+		}
+	}
+}

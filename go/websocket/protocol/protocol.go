@@ -109,6 +109,18 @@ type USDSMTradeEvent struct {
 	BuyerIsMaker     bool   `json:"m"`
 }
 
+// USDSMMarkPriceEvent is one USDⓈ-M Futures mark-price update.
+type USDSMMarkPriceEvent struct {
+	EventType            string `json:"e"`
+	EventTime            int64  `json:"E"`
+	Symbol               string `json:"s"`
+	MarkPrice            string `json:"p"`
+	EstimatedSettlePrice string `json:"P"`
+	IndexPrice           string `json:"i"`
+	FundingRate          string `json:"r"`
+	NextFundingTime      int64  `json:"T"`
+}
+
 // DecodeSpotBookTicker decodes a raw or combined-stream Spot book-ticker message.
 func DecodeSpotBookTicker(message []byte) (SpotBookTickerEvent, error) {
 	var event SpotBookTickerEvent
@@ -147,6 +159,18 @@ func DecodeUSDSMTrade(message []byte) (USDSMTradeEvent, error) {
 	var event USDSMTradeEvent
 	if err := decodeEvent(message, &event); err != nil {
 		return event, fmt.Errorf("failed to decode USDⓈ-M trade event: %w", err)
+	}
+	return event, nil
+}
+
+// DecodeUSDSMMarkPrice decodes a raw or combined-stream USDⓈ-M mark-price message.
+//
+// Version:
+//   - 2026-08-26: Added.
+func DecodeUSDSMMarkPrice(message []byte) (USDSMMarkPriceEvent, error) {
+	var event USDSMMarkPriceEvent
+	if err := decodeEvent(message, &event); err != nil {
+		return event, fmt.Errorf("failed to decode USDⓈ-M mark price event: %w", err)
 	}
 	return event, nil
 }

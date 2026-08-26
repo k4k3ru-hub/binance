@@ -21,6 +21,7 @@ It includes a CLI for all implemented endpoints under `go/cmd/cli`.
 - USDⓈ-M Futures WebSocket diff-depth stream
 - Spot WebSocket trade stream
 - USDⓈ-M Futures WebSocket aggregate-trade stream
+- USDⓈ-M Futures WebSocket mark-price stream, including funding rate and index price
 
 ## References
 

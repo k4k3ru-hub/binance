@@ -25,7 +25,7 @@ func TestConstructorsComposeSubscriptionClientsWithoutConnecting(t *testing.T) {
 		t.Fatalf("NewSpotClient() = %#v, %v", spot, err)
 	}
 	futures, err := NewUSDSMClient(context.Background(), &testHandler{}, nil)
-	if err != nil || futures == nil || futures.Depth() == nil || futures.BookTicker() == nil || futures.Trades() == nil {
+	if err != nil || futures == nil || futures.Depth() == nil || futures.BookTicker() == nil || futures.MarkPrice() == nil || futures.Trades() == nil {
 		t.Fatalf("NewUSDSMClient() = %#v, %v", futures, err)
 	}
 }
